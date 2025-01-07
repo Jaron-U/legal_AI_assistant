@@ -1,14 +1,19 @@
 import os
 from config import Config
 from dotenv import load_dotenv
+from llmodel import LLModel
 
 def init():
     load_dotenv()
+    
+    # for llm api
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     config = Config()
     return config
 
-def get_prompt(prompt_name):
-    prompt_path = f"prompt/{prompt_name}.md"
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        markdown_prompt = f.read()
-    return markdown_prompt
+def query_intent(query: str, intent_model: LLModel):
+    intent_model.add_to_conversation_only_history("user", query)
+    raw_response = intent_model.get_response()
+    response = intent_model.split_response(raw_response)
+    return response

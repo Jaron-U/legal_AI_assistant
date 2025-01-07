@@ -47,7 +47,7 @@ def search_query(query_vector):
     }
     return query
 
-def get_context(question, k=config.k, db_url=config.db_url):
+def get_context(question, k=config.db_k, db_url=config.db_url):
     headers = {"Content-Type": "application/json"}
     query_vector = get_query_vector(question)
     query = search_query(query_vector)
