@@ -1,9 +1,14 @@
 import os
+from config import Config
 from dotenv import load_dotenv
 
-def set_api_keys():
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+def init():
+    load_dotenv()
+    config = Config()
+    return config
 
-def get_llm(model_name = "qwen/qwen-2.5-72b-instruct"):
-    openai_api_key = os.getenv("OPENAI_API_KEY")
+def get_prompt(prompt_name):
+    prompt_path = f"prompt/{prompt_name}.md"
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        markdown_prompt = f.read()
+    return markdown_prompt
