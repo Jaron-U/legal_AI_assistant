@@ -1,7 +1,7 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
 from langchain.docstore.document import Document
 from typing import Any, Iterable, List, Dict
-from .utils import *
+from utils import *
 import re, os, json
 
 class LegalSplitterMD(RecursiveCharacterTextSplitter):

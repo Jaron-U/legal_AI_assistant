@@ -1,45 +1,130 @@
-import os
+import os, json
 from retrieve import *
 from utils import *
+from dotenv import load_dotenv
 from config import Config
 from llmodel import LLModel
+from typing import List, Dict
+from conversation_buffer import ConversationBuffer
+from FlagEmbedding import FlagModel, FlagReranker
+import transformers
+transformers.logging.set_verbosity_error()
 
-def retrieve(query: str):
-    retrieved_docs = get_context(query)
-    return retrieved_docs
+def init():
+    load_dotenv()
+    # for llm api
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-def generate(qwen72b: LLModel, question: str, context: str):
-    qwen72b.add_to_conversation_only_history("user", f"问题: {question}, 获取的内容: {context}")
-    response = qwen72b.get_response()
+    config = Config()
+    return config
+
+def llmodels_init(config: Config):
+    # for main model
+    legal_assistant_model = LLModel(config, stream=True,
+                                    model_name="qwen/qwen-2.5-72b-instruct",
+                                    system_prompt_name="legal_assistant")
+    # for intent recognition
+    intent_recog_model = LLModel(config, stream=True,
+                      model_name="qwen/qwen-2-7b-instruct", 
+                      system_prompt_name="intent_recognition")
+    
+    query_rewrite_model = LLModel(config, stream=False,
+                    model_name="qwen/qwen-2-7b-instruct", 
+                    system_prompt_name="query_rewrite")
+
+    conversation_summary_model = LLModel(config, stream=False,
+                    model_name="qwen/qwen-2-7b-instruct", 
+                    system_prompt_name="conversation_summary")
+    
+    model_dict = {
+        "legal_assistant_model": legal_assistant_model,
+        "intent_recog_model": intent_recog_model,
+        "query_rewrite_model": query_rewrite_model,
+        "conversation_summary_model": conversation_summary_model
+    }
+    return model_dict
+
+def embedding_models_init(config: Config):
+    embedding_model = FlagModel(
+        model_name_or_path = config.flag_model_name,
+        query_instruction_for_retrieval=config.query_instruction_for_retrieval,
+        use_fp16=config.use_fp16
+    )
+
+    rerank_model = FlagReranker(config.rerank_model_name, use_fp16=config.use_fp16)
+
+    return {"embedding_model": embedding_model, "rerank_model": rerank_model}
+
+def retrieve(models: dict, rewritten_query: str, keywords: list[str], config: Config):
+    retrieved_content = get_context(models, rewritten_query, keywords, config)
+    return retrieved_content
+
+# temporary add user's message to conversation buffer and get response
+def temp_generate_response(query: str,conversation_buffer: ConversationBuffer, 
+                           model: LLModel, print_response: bool = False):
+    conversation_buffer.temp_add_user_message(query)
+    response = model.get_response(conversation_buffer.get_conversation_buffer(), print_response = print_response)
+    conversation_buffer.remove_last_message()
     return response
 
-def bash_run(qwen72b: LLModel, intent_model: LLModel):
+def generate(model: LLModel, query: str, context: str, conversation_buffer: ConversationBuffer):
+    # concate the context and query
+    messages = f"问题: {query}\n获取的内容: {context}"
+    response = temp_generate_response(messages, conversation_buffer, model, print_response = True)
+    conversation_buffer.add_user_message(query)
+    conversation_buffer.add_assistant_message(response)
+    return response
+
+def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict, 
+             conversation_buffer: ConversationBuffer):
+    legal_assistant_model = models["legal_assistant_model"]
+    intent_recog_model = models["intent_recog_model"]
+    query_rewrite_model = models["query_rewrite_model"]
+
     while True:
         user_input = input("\nUser: ")
         if user_input.lower() in {"exit", "quit"}:
             break
-        intent_res = query_intent(user_input, intent_model)
+        
+        # temporary add user's message to conversation buffer
+        intent_res = temp_generate_response(user_input, conversation_buffer, intent_recog_model)
 
         if "no" in intent_res.lower():
-            intent_model.remove_last_message()
+            # if user asks a question that is not related to law, remove the last user's message
             print("\nAssistant: 对不起，无法解答与法律无关的问题。")
             continue
         elif "yes" in intent_res.lower():
-            retrieved_context = retrieve(user_input)
-            ai_response = generate(qwen72b, user_input, retrieved_context)
-            full_response = qwen72b.print_response(ai_response)
-            qwen72b.add_to_conversation_only_history("assistant", full_response)
+            # if user asks a question that is related to law, then rewrite the question
+            rewritten_query = temp_generate_response(user_input, conversation_buffer, 
+                                                     query_rewrite_model)
+            print(rewritten_query)
+            try:
+                rewritten_query_json = json.loads(rewritten_query)
+            except json.JSONDecodeError:
+                print("\nAssistant: 对不起，无法解答这个问题。")
+                continue
+            rewritten_query = rewritten_query_json["rewritten_query"]
+            keywords = rewritten_query_json["keywords"]
+
+            # get the context from the database
+            retrieved_context = retrieve(embedding_models, rewritten_query, keywords, config)
+
+            # generate the response
+            _ = generate(legal_assistant_model, rewritten_query, retrieved_context, conversation_buffer)
         else:
+            # incase the intent recognition model is not sure about the intent
+            conversation_buffer.add_user_message(user_input)
+            conversation_buffer.add_assistant_message(intent_res)
             print("\nAssistant: ", intent_res)
+        
+        conversation_buffer.print_conversation_buffer()
+
+def main():
+    config = init()
+    models = llmodels_init(config)
+    embedding_models = embedding_models_init(config)
+    conversation_buffer = ConversationBuffer(models['conversation_summary_model'], config)
+    bash_run(config, models, embedding_models, conversation_buffer)
 
 if __name__ == "__main__":
-    config = init()
-    # for main model
-    qwen72b = LLModel(config)
-
-    # for intent recognition
-    qwen7b = LLModel(config, stream=False,
-                      model_name="qwen/qwen-2-7b-instruct", 
-                      system_prompt_name="intent_recognition")
-
-    bash_run(qwen72b, qwen7b)
+    main()

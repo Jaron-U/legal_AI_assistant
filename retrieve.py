@@ -1,37 +1,20 @@
 import requests
-from FlagEmbedding import FlagModel
+from FlagEmbedding import FlagModel, FlagReranker
 import transformers
 transformers.logging.set_verbosity_error()
 from config import Config
 
-config = Config()
+def get_query_vectors(model: FlagModel, keywords):
+    vectors = {keyword: model.encode(keyword).tolist() for keyword in keywords}
+    return vectors
 
-def get_embedding_model(model_name=config.flag_model_name):
-    model = FlagModel(
-        model_name,
-        query_instruction_for_retrieval=config.query_instruction_for_retrieval,
-        use_fp16=config.use_fp16
-    )
-    return model
+def search_query(query_vectors: dict[str, list[float]]):
+    query_conditions = []
 
-def get_query_vector(query):
-    model = get_embedding_model()
-    vector = model.encode(query)
-    if isinstance(vector, list) is False:
-        vector = vector.tolist() 
-    return  vector
-
-def search_query(query_vector):
-    query = {
-        "query": {
+    for keyword, vector in query_vectors.items():
+        query_conditions.append({
             "script_score": {
-                "query": {
-                    "bool": {
-                        "should": [
-                            {"match_all": {}}
-                        ]
-                    }
-                },
+                "query": {"match_all": {}},
                 "script": {
                     "source": """
                         double paraScore = cosineSimilarity(params.queryVector, doc['para_vector']) + 1.0;
@@ -39,25 +22,75 @@ def search_query(query_vector):
                         return paraScore + titleScore;
                     """,
                     "params": {
-                        "queryVector": query_vector
+                        "queryVector": vector
                     }
                 }
             }
+        })
+    
+    # Combine all conditions using `should`
+    query = {
+        "query": {
+            "bool": {
+                "should": query_conditions
+            }
         }
     }
+    
     return query
 
-def get_context(question, k=config.db_k, db_url=config.db_url):
+def _get_context_from_db(query_vectors, k = 10, db_url="http://localhost:9200/legal_data/_search"):
     headers = {"Content-Type": "application/json"}
-    query_vector = get_query_vector(question)
-    query = search_query(query_vector)
-    response = requests.post(db_url, json=query, headers=headers)
+    post_query = search_query(query_vectors)
+    response = requests.post(db_url, json=post_query, headers=headers)
     if response.status_code == 200:
         hits = response.json().get('hits', {}).get('hits', [])[:k]
-        context = "\n\n".join(
-            f"{hit.get('_source', {}).get('title', '无标题')}\n{hit.get('_source', {}).get('para', '无内容')}"
+        context = [
+            f"{hit.get('_source', {}).get('title', '无标题')} {hit.get('_source', {}).get('para', '无内容')}"
             for hit in hits
-        )
+        ]
     else:
         context = "查询失败"
     return context
+
+def _rerank_documents(rewritten_query: str, context_hits: list[str], top_n, reranker: FlagReranker):
+    # combine the context hits and query.
+    sentence_pairs = [[rewritten_query, context] for context in context_hits]
+    # calculate the reranking score
+    scores = reranker.compute_score(sentence_pairs)
+
+    score_document = [{"score": score, "content": content} for score, content in zip(scores, context_hits)]
+    sorted_score_document = sorted(score_document, key=lambda x: x["score"], reverse=True)[:top_n]
+
+    return [doc["content"] for doc in sorted_score_document]
+
+def get_context(models: dict, rewritten_query:str, keywords: list[str], config: Config):
+    embedding_model = models["embedding_model"]
+    reranker = models["rerank_model"]
+    keywords_vectors = get_query_vectors(embedding_model, keywords)
+    context_hits = _get_context_from_db(keywords_vectors, config.db_k, config.db_url)
+    reranked_context = _rerank_documents(rewritten_query, context_hits, config.ranked_k, reranker)
+
+    # combine the ranked context into one string
+    context = "\n\n".join(reranked_context)
+
+    return context
+
+if __name__ == "__main__":
+    def embedding_models_init(config: Config):
+        embedding_model = FlagModel(
+            model_name_or_path = config.flag_model_name,
+            query_instruction_for_retrieval=config.query_instruction_for_retrieval,
+            use_fp16=config.use_fp16
+        )
+
+        rerank_model = FlagReranker(config.rerank_model_name, use_fp16=config.use_fp16)
+
+        return {"embedding_model": embedding_model, "rerank_model": rerank_model}
+    keywords = ["民法商法", "农民专业合作社法", "第三十三条"]
+    rewritten_query = "用户意图获取民法商法农民专业合作社法第三十三条的具体条款内容"
+    config = Config()
+    models = embedding_models_init(config)
+    context = get_context(models, rewritten_query, keywords, config)
+    print(context)
+

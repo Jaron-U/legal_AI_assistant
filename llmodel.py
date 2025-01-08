@@ -5,7 +5,7 @@ class LLModel:
     def __init__(self, config: Config, model_name = "qwen/qwen-2.5-72b-instruct",  
                  stream = True, max_tokens = 32000, temperature = 1, top_p = 1,
                  presence_penalty = 0, frequency_penalty = 0, response_format = { "type": "text" },
-                 top_k = 50, repetition_penalty = 1, min_p = 0, system_prompt_name = "plain_prompt"):
+                 top_k = 50, repetition_penalty = 1, min_p = 0, system_prompt_name = "legal_assistant"):
         self.model_name = model_name
         self.stream = stream
         self.max_tokens = max_tokens
@@ -23,7 +23,6 @@ class LLModel:
         self.system_prompt = _get_sys_prompt(system_prompt_name)
 
         self.prompt_history = [] # include system prompt and conversation history
-        self.conversation_only_history = [] # only conversation history
 
         self.client = OpenAI(
             base_url=config.llm_api_url,
@@ -32,25 +31,8 @@ class LLModel:
         self.llm = self.client.chat.completions
 
         self.response = None
-        
-    def clean_conversation_only_history(self):
-        self.conversation_only_history = []
-    
-    def get_conversation_only_history(self):
-        return self.conversation_only_history
-    
-    def set_conversation_only_history(self, conversation_only_history: list):
-        self.conversation_only_history = conversation_only_history
-    
-    def add_to_conversation_only_history(self, role: str, content: str):
-        self.conversation_only_history.append({"role": role, "content": content})
 
-    def get_response(self, i_conversation_history: list = None):
-        if i_conversation_history is None:
-            conversation_history = self.conversation_only_history
-        else:
-            conversation_history = i_conversation_history
-        
+    def _get_response(self, conversation_history: list = None):
         messages = [self.system_prompt] + conversation_history
         self.prompt_history = messages 
         response = self.llm.create(
@@ -72,7 +54,17 @@ class LLModel:
         self.response = response
         return response
 
-    def split_response(self, i_response=None):
+    def get_response(self, conversation_history: list = None, print_response = False):
+        _ = self._get_response(conversation_history)
+
+        if print_response:
+            response = self._print_response()
+        else:
+            response = self._split_response()
+            
+        return response
+
+    def _split_response(self, i_response=None):
         if i_response:
             response = i_response
         else:
@@ -88,15 +80,12 @@ class LLModel:
         
         return full_content
     
-    def remove_last_message(self):
-        self.conversation_only_history.pop()
-
-    def print_response(self, i_response=None):
+    def _print_response(self, i_response=None):
         if i_response:
             response = i_response
         else:
             response = self.response
-
+        
         full_content = ""
 
         if self.stream:

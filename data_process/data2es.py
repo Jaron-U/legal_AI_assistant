@@ -45,6 +45,7 @@ def create_db(index_name="legal_data"):
 
     # if the db is exit just delete it
     if es.indices.exists(index=index_name):
+        print(f"delete index {index_name}")
         es.indices.delete(index=index_name)
     es.indices.create(index=index_name, body=create_index_body)
 
@@ -96,7 +97,7 @@ if __name__ == "__main__":
                     query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",
                     use_fp16=True)
     index_name = "legal_data"
-    dataset_path = "dataset"
+    dataset_path = "/home/jianglongyu/Documents/llm/law_ai_assistant/dataset"
     create_db(index_name)
     data2es(index_name, model, dataset_path)
 

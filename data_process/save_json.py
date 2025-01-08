@@ -1,7 +1,7 @@
 import uuid
 import json
 from tqdm import tqdm
-from .splitter import *
+from splitter import *
 
 def create_json_file_md(docs, output_path):
     json_data = []
@@ -77,4 +77,5 @@ def write_txt2():
         json.dump(json_data, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
+    write_txt1()
     pass
