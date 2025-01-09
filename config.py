@@ -2,6 +2,7 @@ import os
 class Config:
     # for llm
     llm_api_url = "https://api.novita.ai/v3/openai"
+    # llm_api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     llm_api_key = os.getenv("OPENAI_API_KEY")
 
     # for FlagModel

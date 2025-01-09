@@ -1,11 +1,16 @@
 from openai import OpenAI
 from config import Config
+from typing import List, Dict
+from utils import get_sys_prompt
+from summarizer import Summarizer
 
 class LLModel:
-    def __init__(self, config: Config, model_name = "qwen/qwen-2.5-72b-instruct",  
+    def __init__(self, config: Config, summarizer: Summarizer,
+                 model_name = "qwen/qwen-2.5-72b-instruct",  
                  stream = True, max_tokens = 32000, temperature = 1, top_p = 1,
                  presence_penalty = 0, frequency_penalty = 0, response_format = { "type": "text" },
                  top_k = 50, repetition_penalty = 1, min_p = 0, system_prompt_name = "legal_assistant"):
+        self.config = config
         self.model_name = model_name
         self.stream = stream
         self.max_tokens = max_tokens
@@ -20,22 +25,55 @@ class LLModel:
         self.repetition_penalty = repetition_penalty
 
         self.system_prompt_name = system_prompt_name
-        self.system_prompt = _get_sys_prompt(system_prompt_name)
+        self.system_prompt = get_sys_prompt(system_prompt_name)
 
-        self.prompt_history = [] # include system prompt and conversation history
+        self.summarizer = summarizer
+        self.conversation_buffer = []
+        self.keep_k = config.conversation_buffer_keep_k
 
         self.client = OpenAI(
             base_url=config.llm_api_url,
             api_key=config.llm_api_key,
         )
-        self.llm = self.client.chat.completions
 
         self.response = None
+    
+    def set_conversation_buffer(self, conversation_buffer: List[Dict[str, str]]):
+        self.conversation_buffer = conversation_buffer
+    
+    def add_user_message(self, message: str):
+        self._add_message("user", message)
+    
+    def add_assistant_message(self, message: str):
+        self._add_message("assistant", message)
+    
+    def remove_last_message(self):
+        self.conversation_buffer.pop()
+    
+    def print_conversation_buffer(self):
+        for msg in self.conversation_buffer:
+            print(msg)
 
-    def _get_response(self, conversation_history: list = None):
-        messages = [self.system_prompt] + conversation_history
-        self.prompt_history = messages 
-        response = self.llm.create(
+    def _add_message(self, role: str, message: str) -> None:
+        self.conversation_buffer.append({"role": role, "content": message})
+        self._maybe_summarize_and_trim()
+    
+    def _maybe_summarize_and_trim(self) -> None:
+        current_rounds = len(self.conversation_buffer) // 2
+        while current_rounds > self.keep_k:
+            earliest_round = self.conversation_buffer[:2]
+            summary = self.summarizer.get_summary(earliest_round)
+
+            self.conversation_buffer = self.conversation_buffer[2:]
+            self.conversation_buffer.insert(
+                0, {"role": "assistant", "content": f"历史对话总结: {summary}"}
+            )
+
+            current_rounds = len(self.conversation_buffer) // 2
+
+    def _get_response(self):
+        messages = [self.system_prompt] + self.conversation_buffer
+        response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
             stream=self.stream,
@@ -51,11 +89,12 @@ class LLModel:
                 "min_p": self.min_p,
             }
         )
+        
         self.response = response
         return response
 
-    def get_response(self, conversation_history: list = None, print_response = False):
-        _ = self._get_response(conversation_history)
+    def get_response(self, print_response = False):
+        _ = self._get_response()
 
         if print_response:
             response = self._print_response()
@@ -64,10 +103,8 @@ class LLModel:
             
         return response
 
-    def _split_response(self, i_response=None):
-        if i_response:
-            response = i_response
-        else:
+    def _split_response(self, response=None):
+        if response is None:
             response = self.response
 
         if self.stream:
@@ -80,10 +117,8 @@ class LLModel:
         
         return full_content
     
-    def _print_response(self, i_response=None):
-        if i_response:
-            response = i_response
-        else:
+    def _print_response(self, response=None):
+        if response is None:
             response = self.response
         
         full_content = ""
@@ -100,19 +135,11 @@ class LLModel:
             print(f"Assistant: {full_content}")
         return full_content
 
-    def print_prompt_history(self, i_conversation_history=None):
-        if i_conversation_history:
-            conversation_history = i_conversation_history
-        else:
-            conversation_history = self.prompt_history
-
-        print("--------------history------------------")
+    def print_prompt_history(self, conversation_history=None):
+        if conversation_history is None:
+            conversation_history = [self.system_prompt] + self.conversation_buffer
+        
+        print(f"--------------{self.system_prompt_name}-----------------")
         for message in conversation_history:
             print(f"\n{message['role']}: {message['content']}")
         print("----------------end----------------")
-
-def _get_sys_prompt(prompt_name: str):
-    prompt_path = f"prompt/{prompt_name}.md"
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        markdown_prompt = f.read()
-    return {"role": "system", "content": markdown_prompt}
