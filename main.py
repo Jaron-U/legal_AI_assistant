@@ -20,7 +20,7 @@ def init():
 
 def llmodels_init(config: Config):
     summarizer = Summarizer(config, stream=False,
-                    model_name="qwen/qwen-2-7b-instruct", 
+                    model_name="qwen/qwen-2.5-72b-instruct", 
                     system_prompt_name="conversation_summary")
 
     # for main model
@@ -29,11 +29,11 @@ def llmodels_init(config: Config):
                                     system_prompt_name="legal_assistant")
     # for intent recognition
     intent_recog_model = LLModel(config, summarizer=summarizer, stream=True,
-                      model_name="qwen/qwen-2-7b-instruct", 
+                      model_name="qwen/qwen-2.5-72b-instruct", 
                       system_prompt_name="intent_recognition")
     
     query_rewrite_model = LLModel(config, summarizer=summarizer, stream=False,
-                    model_name="qwen/qwen-2-7b-instruct", 
+                    model_name="qwen/qwen-2.5-72b-instruct", 
                     system_prompt_name="query_rewrite")
 
     model_dict = {
@@ -55,6 +55,7 @@ def embedding_models_init(config: Config):
     return {"embedding_model": embedding_model, "rerank_model": rerank_model}
 
 def retrieve_db(models: dict, rewritten_query: str, keywords: list[str], config: Config):
+    print("Retrieving from database...")
     retrieved_content = get_context(models, rewritten_query, keywords, config)
     return retrieved_content
 
@@ -62,18 +63,19 @@ def generate_response(user_input: str, model: LLModel, print_response = True):
     model.add_user_message(user_input)
     response = model.get_response(print_response)
     model.add_assistant_message(response)
-    model.print_prompt_history()
+    # model.print_prompt_history()
     return response
 
 def generate(model: LLModel, query: str, context: str):
     # concate the context and query
     messages = f"问题: {query}\n获取的内容: {context}"
+    # print(messages)
     model.add_user_message(messages)
     response = model.get_response(print_response=True)
     model.remove_last_message()
     model.add_user_message(query)
     model.add_assistant_message(response)
-    model.print_prompt_history()
+    # model.print_prompt_history()
     return response
 
 def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict):
@@ -88,7 +90,7 @@ def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict)
         
         # get the intent of the user's input
         intent_res = generate_response(user_input, intent_recog_model, print_response = False)
-        print("\n意图: ", intent_res)
+        # print("\n意图: ", intent_res)
         if "no" in intent_res.lower():
             # if user asks a question that is not related to law, remove the last user's message
             print("\nAssistant: 对不起，无法解答与法律无关的问题。")
@@ -96,7 +98,7 @@ def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict)
         elif "yes" in intent_res.lower():
             # if user asks a question that is related to law, then rewrite the question
             rewritten_query = generate_response(user_input, query_rewrite_model, print_response = False)
-            print(rewritten_query)
+            # print(rewritten_query)
             try:
                 rewritten_query_json = json.loads(rewritten_query)
             except json.JSONDecodeError:

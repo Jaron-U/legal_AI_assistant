@@ -22,4 +22,5 @@ class Config:
     # for retrieve for web
     web_k = 3
 
-    conversation_buffer_keep_k = 3
+    conversation_buffer_keep_k = 2
+    max_round_to_summarize = 6
