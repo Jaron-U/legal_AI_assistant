@@ -31,7 +31,10 @@ class Summarizer:
         )
 
     def get_summary(self, conversation_buffer: List[Dict[str, str]]):
-        messages = [self.system_prompt] + conversation_buffer
+        messages = self.system_prompt.format(
+            conversation_history=conversation_buffer,
+        )
+        messages = [{"role": "system", "content": self.system_prompt}]
         # print(messages)
         response = self.client.chat.completions.create(
             model=self.model_name,

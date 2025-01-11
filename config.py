@@ -11,7 +11,7 @@ class Config:
     use_fp16 = True
     # flagReranker
     rerank_model_name = 'BAAI/bge-reranker-large'
-    ranked_k = 3
+    ranked_k = 5
 
     # for Elasticsearch
     db_url = "http://localhost:9200/legal_data/_search"
@@ -22,5 +22,5 @@ class Config:
     # for retrieve for web
     web_k = 3
 
-    conversation_buffer_keep_k = 2
-    max_round_to_summarize = 6
+    conversation_buffer_keep_k = 3
+    max_round_dialog = 8

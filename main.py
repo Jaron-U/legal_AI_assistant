@@ -20,19 +20,25 @@ def init():
 
 def llmodels_init(config: Config):
     summarizer = Summarizer(config, stream=False,
-                    model_name="qwen/qwen-2.5-72b-instruct", 
+                    model_name="qwen/qwen-2-7b-instruct", 
                     system_prompt_name="conversation_summary")
 
     # for main model
     legal_assistant_model = LLModel(config, summarizer=summarizer, stream=True,
+                                    conversation_embedding_prompt=True,
+                                    dialog_summary=True,
                                     model_name="qwen/qwen-2.5-72b-instruct",
                                     system_prompt_name="legal_assistant")
     # for intent recognition
     intent_recog_model = LLModel(config, summarizer=summarizer, stream=True,
-                      model_name="qwen/qwen-2.5-72b-instruct", 
-                      system_prompt_name="intent_recognition")
+                                conversation_embedding_prompt=True,
+                                dialog_summary=False,
+                                model_name="qwen/qwen-2-7b-instruct", 
+                                system_prompt_name="intent_recognition")
     
     query_rewrite_model = LLModel(config, summarizer=summarizer, stream=False,
+                    conversation_embedding_prompt=True,
+                    dialog_summary=False,
                     model_name="qwen/qwen-2.5-72b-instruct", 
                     system_prompt_name="query_rewrite")
 
@@ -60,19 +66,19 @@ def retrieve_db(models: dict, rewritten_query: str, keywords: list[str], config:
     return retrieved_content
 
 def generate_response(user_input: str, model: LLModel, print_response = True):
-    model.add_user_message(user_input)
+    model.messages_embed(user_input)
     response = model.get_response(print_response)
+    model.add_user_message(user_input)
     model.add_assistant_message(response)
     # model.print_prompt_history()
     return response
 
 def generate(model: LLModel, query: str, context: str):
     # concate the context and query
-    messages = f"问题: {query}\n获取的内容: {context}"
-    # print(messages)
-    model.add_user_message(messages)
+    message = f"问题: {query}\n\n获取的内容: {context}"
+    print(message)
+    model.messages_embed(message)
     response = model.get_response(print_response=True)
-    model.remove_last_message()
     model.add_user_message(query)
     model.add_assistant_message(response)
     # model.print_prompt_history()
@@ -98,20 +104,20 @@ def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict)
         elif "yes" in intent_res.lower():
             # if user asks a question that is related to law, then rewrite the question
             rewritten_query = generate_response(user_input, query_rewrite_model, print_response = False)
-            # print(rewritten_query)
+            print(rewritten_query)
             try:
                 rewritten_query_json = json.loads(rewritten_query)
             except json.JSONDecodeError:
                 print("\nAssistant: 对不起，无法解答这个问题。")
                 continue
-            rewritten_query = rewritten_query_json["rewritten_query"]
+            rewritten_query = rewritten_query_json["rewritten"]
             keywords = rewritten_query_json["keywords"]
 
             # get the context from the database
             retrieved_context = retrieve_db(embedding_models, rewritten_query, keywords, config)
 
             # generate the response
-            _ = generate(legal_assistant_model, rewritten_query, retrieved_context)
+            _ = generate(legal_assistant_model, user_input, retrieved_context)
         else:
             print(f"\nAssistant: {intent_res}")
 

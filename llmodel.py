@@ -6,10 +6,19 @@ from summarizer import Summarizer
 
 class LLModel:
     def __init__(self, config: Config, summarizer: Summarizer,
+                 conversation_embedding_prompt: bool = True,
+                 dialog_summary: bool = False,
                  model_name = "qwen/qwen-2.5-72b-instruct",  
                  stream = True, max_tokens = 2000, temperature = 1, top_p = 1,
                  presence_penalty = 0, frequency_penalty = 0, response_format = { "type": "text" },
                  top_k = 50, repetition_penalty = 1, min_p = 0, system_prompt_name = "legal_assistant"):
+        '''
+        Args:
+            config: Config object
+            summarizer: the llm model to summarize conversation history
+            conversation_embedding_prompt: Whether or not the dialog needs to be embedded in the prompt
+            dialog_summary: Whether or not the dialog needs to be summarized
+        '''
         self.config = config
         self.model_name = model_name
         self.stream = stream
@@ -27,10 +36,14 @@ class LLModel:
         self.system_prompt_name = system_prompt_name
         self.system_prompt = get_sys_prompt(system_prompt_name)
 
+        self.messages = [] # system prompt + conversation history
+        self.conversation_embedding_prompt = conversation_embedding_prompt
+
         self.summarizer = summarizer
         self.conversation_buffer = []
         self.keep_k = config.conversation_buffer_keep_k
-        self.max_round_to_summarize = config.max_round_to_summarize
+        self.max_round_dialog = config.max_round_dialog
+        self.dialog_summary = dialog_summary
 
         self.client = OpenAI(
             base_url=config.llm_api_url,
@@ -60,23 +73,46 @@ class LLModel:
         self._maybe_summarize_and_trim()
     
     def _maybe_summarize_and_trim(self) -> None:
+        """
+        Summarize and trim the conversation buffer if necessary.
+        """
         current_rounds = len(self.conversation_buffer) // 2
-        if current_rounds > self.max_round_to_summarize:
-            print("Summarizing conversation history...")
-            num_rounds_to_trim = current_rounds - self.keep_k
-            earliest_round = self.conversation_buffer[:num_rounds_to_trim * 2]
-            summary = self.summarizer.get_summary(earliest_round)
+        
+        if current_rounds > self.max_round_dialog:
+            if self.dialog_summary:
+                print("Summarizing conversation history...")
+                num_rounds_to_trim = current_rounds - self.keep_k
+                earliest_round = self.conversation_buffer[:num_rounds_to_trim * 2]
+                summary = self.summarizer.get_summary(earliest_round)
 
-            self.conversation_buffer = self.conversation_buffer[num_rounds_to_trim*2:]
-            self.conversation_buffer.insert(
-                0, {"role": "assistant", "content": f"历史对话总结: {summary}"}
-            )
+                self.conversation_buffer = self.conversation_buffer[num_rounds_to_trim*2:]
+                self.conversation_buffer.insert(
+                    0, {"role": "assistant", "content": f"历史对话总结: {summary}"}
+                )
+            else:
+                self.conversation_buffer = self.conversation_buffer[-self.keep_k * 2:]
+
+    def messages_embed(self, query:str = None):
+        if self.conversation_embedding_prompt:
+            if query:
+                embed_messages = self.system_prompt.format(
+                    conversation_history=self.conversation_buffer,
+                    query=query
+                )
+            else:
+                embed_messages = self.system_prompt.format(
+                    conversation_history=self.conversation_buffer
+                )
+            messages = [{"role": "system", "content": embed_messages}]
+        else:
+            messages = [{"role": "system", "content": self.system_prompt}] + self.conversation_buffer
+        self.messages = messages
+        return messages
 
     def _get_response(self):
-        messages = [self.system_prompt] + self.conversation_buffer
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=messages,
+            messages=self.messages,
             stream=self.stream,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
@@ -136,11 +172,8 @@ class LLModel:
             print(f"Assistant: {full_content}")
         return full_content
 
-    def print_prompt_history(self, conversation_history=None):
-        if conversation_history is None:
-            conversation_history = [self.system_prompt] + self.conversation_buffer
-        
+    def print_prompt_history(self):
         print(f"--------------{self.system_prompt_name}-----------------")
-        for message in conversation_history:
+        for message in self.messages:
             print(f"\n{message['role']}: {message['content']}")
         print("----------------end----------------")
