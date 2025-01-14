@@ -1,5 +1,5 @@
-from .config import Config
-from .utils import get_sys_prompt
+from config import Config
+from utils import get_sys_prompt
 from openai import OpenAI
 from typing import List, Dict
 

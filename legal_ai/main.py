@@ -1,15 +1,15 @@
 import os, json
-from components.retrieve import *
-from components.utils import *
+from retrieve import *
+from utils import *
 from dotenv import load_dotenv
-from components.config import Config
-from components.llmodel import LLModel
+from config import Config
+from llmodel import LLModel
 from typing import List, Dict
-from components.summarizer import Summarizer
+from summarizer import Summarizer
 from FlagEmbedding import FlagModel, FlagReranker
 import transformers
 transformers.logging.set_verbosity_error()
-from components.web_rerieve import web_retrieve
+from web_rerieve import web_retrieve
 
 def init():
     load_dotenv()
@@ -28,7 +28,7 @@ def llmodels_init(config: Config):
     legal_assistant_model = LLModel(config, summarizer=summarizer, stream=True,
                                     conversation_embedding_prompt=True,
                                     dialog_summary=True,
-                                    model_name="qwen/qwen-2.5-72b-instruct",
+                                    model_name="qwen/qwen-2-7b-instruct",
                                     system_prompt_name="legal_assistant")
     # for intent recognition
     intent_recog_model = LLModel(config, summarizer=summarizer, stream=True,
@@ -40,7 +40,7 @@ def llmodels_init(config: Config):
     query_rewrite_model = LLModel(config, summarizer=summarizer, stream=False,
                     conversation_embedding_prompt=True,
                     dialog_summary=False,
-                    model_name="qwen/qwen-2.5-72b-instruct", 
+                    model_name="qwen/qwen-2-7b-instruct", 
                     system_prompt_name="query_rewrite")
 
     db_content_check_model = LLModel(config, summarizer=summarizer, stream=True,
