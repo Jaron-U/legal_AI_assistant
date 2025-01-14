@@ -80,7 +80,6 @@ class LLModel:
         
         if current_rounds > self.max_round_dialog:
             if self.dialog_summary:
-                print("Summarizing conversation history...")
                 num_rounds_to_trim = current_rounds - self.keep_k
                 earliest_round = self.conversation_buffer[:num_rounds_to_trim * 2]
                 summary = self.summarizer.get_summary(earliest_round)
@@ -89,19 +88,24 @@ class LLModel:
                 self.conversation_buffer.insert(
                     0, {"role": "assistant", "content": f"历史对话总结: {summary}"}
                 )
+                # self.print_conversation_buffer()
             else:
                 self.conversation_buffer = self.conversation_buffer[-self.keep_k * 2:]
 
-    def messages_embed(self, query:str = None):
+    def messages_embed(self, query:str = None, embed_history: bool = True):
         if self.conversation_embedding_prompt:
-            if query:
+            if query and embed_history:
                 embed_messages = self.system_prompt.format(
                     conversation_history=self.conversation_buffer,
                     query=query
                 )
-            else:
+            elif query is None and embed_history:
                 embed_messages = self.system_prompt.format(
                     conversation_history=self.conversation_buffer
+                )
+            elif query and not embed_history:
+                embed_messages = self.system_prompt.format(
+                    query=query
                 )
             messages = [{"role": "system", "content": embed_messages}]
         else:

@@ -53,7 +53,7 @@ def _get_context_from_db(query_vectors, k = 10, db_url="http://localhost:9200/le
         context = "查询失败"
     return context
 
-def _rerank_documents(rewritten_query: str, context_hits: list[str], top_n, reranker: FlagReranker):
+def rerank_documents(rewritten_query: str, context_hits: list[str], top_n, reranker: FlagReranker):
     # combine the context hits and query.
     sentence_pairs = [[rewritten_query, context] for context in context_hits]
     # calculate the reranking score
@@ -69,7 +69,7 @@ def get_context(models: dict, rewritten_query:str, keywords: list[str], config: 
     reranker = models["rerank_model"]
     keywords_vectors = get_query_vectors(embedding_model, keywords)
     context_hits = _get_context_from_db(keywords_vectors, config.db_k, config.db_url)
-    reranked_context = _rerank_documents(rewritten_query, context_hits, config.ranked_k, reranker)
+    reranked_context = rerank_documents(rewritten_query, context_hits, config.ranked_k, reranker)
 
     # combine the ranked context into one string
     context = "\n\n".join(reranked_context)

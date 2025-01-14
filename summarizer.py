@@ -30,11 +30,17 @@ class Summarizer:
             api_key=config.llm_api_key,
         )
 
-    def get_summary(self, conversation_buffer: List[Dict[str, str]]):
-        messages = self.system_prompt.format(
-            conversation_history=conversation_buffer,
-        )
-        messages = [{"role": "system", "content": self.system_prompt}]
+    def get_summary(self, conversation_buffer: List[Dict[str, str]] = None, query: List[str] = None):
+        print("Summarizing content...")
+        if conversation_buffer:
+            message = self.system_prompt.format(
+                conversation_history=conversation_buffer,
+            )
+        elif query:
+            message = self.system_prompt.format(
+                query=query,
+            )
+        messages = [{"role": "system", "content": message}]
         # print(messages)
         response = self.client.chat.completions.create(
             model=self.model_name,

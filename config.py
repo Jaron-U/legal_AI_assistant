@@ -20,7 +20,8 @@ class Config:
     db_k = 10
 
     # for retrieve for web
-    web_k = 3
+    web_k = 15
+    web_ranked_k = 3
 
     conversation_buffer_keep_k = 3
     max_round_dialog = 8
