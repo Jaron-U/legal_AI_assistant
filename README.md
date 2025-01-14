@@ -66,7 +66,7 @@ mkdir .env
 ```
 add "OPENAI_API_KEY=your_api_key" to the .env file
 
-Also your can modify your own LLM API url in the config.py. The large model API you use needs to be compatible with the OpenAI interface
+Also your can modify your own LLM API url in the components/config.py. The large model API you use needs to be compatible with the OpenAI interface
 
 ### 6. Start the project
 ```bash

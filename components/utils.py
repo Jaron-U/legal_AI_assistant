@@ -1,4 +1,3 @@
-from .config import Config
 
 def get_sys_prompt(prompt_name: str):
     prompt_path = f"prompt/{prompt_name}.md"
