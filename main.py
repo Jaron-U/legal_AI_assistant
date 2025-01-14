@@ -1,15 +1,15 @@
 import os, json
-from retrieve import *
-from utils import *
+from components.retrieve import *
+from components.utils import *
 from dotenv import load_dotenv
-from config import Config
-from llmodel import LLModel
+from components.config import Config
+from components.llmodel import LLModel
 from typing import List, Dict
-from summarizer import Summarizer
+from components.summarizer import Summarizer
 from FlagEmbedding import FlagModel, FlagReranker
 import transformers
 transformers.logging.set_verbosity_error()
-from web_rerieve import web_retrieve
+from components.web_rerieve import web_retrieve
 
 def init():
     load_dotenv()

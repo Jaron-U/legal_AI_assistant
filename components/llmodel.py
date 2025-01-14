@@ -1,8 +1,8 @@
 from openai import OpenAI
-from config import Config
+from .config import Config
 from typing import List, Dict
-from utils import get_sys_prompt
-from summarizer import Summarizer
+from .utils import get_sys_prompt
+from .summarizer import Summarizer
 
 class LLModel:
     def __init__(self, config: Config, summarizer: Summarizer,

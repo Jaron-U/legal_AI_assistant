@@ -2,7 +2,7 @@ import requests
 from FlagEmbedding import FlagModel, FlagReranker
 import transformers
 transformers.logging.set_verbosity_error()
-from config import Config
+from components.config import Config
 
 def get_query_vectors(model: FlagModel, keywords):
     vectors = {keyword: model.encode(keyword).tolist() for keyword in keywords}

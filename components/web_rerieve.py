@@ -1,8 +1,8 @@
-from summarizer import Summarizer
+from .summarizer import Summarizer
 from duckduckgo_search import DDGS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from typing import List
-from retrieve import rerank_documents
+from .retrieve import rerank_documents
 from FlagEmbedding import FlagReranker
 
 def web_retrieve(keywords: List, rewritten_query: str,
