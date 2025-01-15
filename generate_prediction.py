@@ -1,21 +1,17 @@
 import os, json
 from legal_ai.retrieve import *
 from legal_ai.utils import *
-from dotenv import load_dotenv
 from legal_ai.config import Config
 from legal_ai.llmodel import LLModel
 from typing import List, Dict
-from legal_ai.summarizer import Summarizer
-from FlagEmbedding import FlagModel, FlagReranker
 import transformers
 transformers.logging.set_verbosity_error()
-from legal_ai.web_rerieve import web_retrieve
 from main import *
 from tqdm import tqdm
 
 from rouge_chinese import Rouge
 import jieba
-from nltk.translate.gleu_score import corpus_gleu
+from openai import OpenAI
 
 def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_models: dict):
     with open('evaluate/flzx.json', 'r', encoding='utf-8') as file:
@@ -27,7 +23,8 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
         query = item['question']
 
         response = only_response(query, config, models, embedding_models)
-        print(response)
+        print("query:", query)
+        print("response:", response)
         answer = item['answer']
 
         curr = {
@@ -67,14 +64,17 @@ def compute_flzx(data_dict):
     average_rouge_l = sum(rouge_ls) / len(rouge_ls)
     return {"score": average_rouge_l}
 
-
 if __name__ == "__main__":
+    # {'score': 0.17831063105163042}
     config = init()
     models = llmodels_init(config)
     embedding_models = embedding_models_init(config)
     generate_prediction(config, models, embedding_models)
 
+    # qwen2-7b 0.159
+
     # evaluate the predictions
+    # {'score': 0.15610118712931575}
     with open('predictions.json', 'r', encoding='utf-8') as file:
         data_dict = json.load(file)
     print("start to calculate the score...")
