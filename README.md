@@ -12,6 +12,7 @@ cd legal_AI_assistant
 ```
 ### 2. Install the dependencies
 ```bash
+# recommend to use virtualenv
 pip install -r requirements.txt
 ```
 
@@ -27,7 +28,7 @@ cd data_process
 python save_json.py # need to modeify the path in the script
 ```
 
-### 3. Build the database
+### 3. Create the database in Docker
 ```bash
 # download the docker if you don't have
 
@@ -60,7 +61,8 @@ exit
 docker restart es
 ```
 
-### 4. Configure your API
+## How to run
+### 1. Configure your API
 ```bash
 mkdir .env
 ```
@@ -68,7 +70,7 @@ add "OPENAI_API_KEY=your_api_key" to the .env file
 
 Also your can modify your own LLM API url in the legal_ai/config.py. The large model API you use needs to be compatible with the OpenAI interface
 
-### 6. Start the project
+### 2. Start the project
 ```bash
 python legal/main.py
 ```

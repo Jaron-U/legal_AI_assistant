@@ -1,13 +1,14 @@
 from openai import OpenAI
-from config import Config
+from .config import Config
 from typing import List, Dict
-from utils import get_sys_prompt
-from summarizer import Summarizer
+from .utils import get_sys_prompt
+from .summarizer import Summarizer
 
 class LLModel:
     def __init__(self, config: Config, summarizer: Summarizer,
                  conversation_embedding_prompt: bool = True,
                  dialog_summary: bool = False,
+                 max_round_dialog: int = 8,
                  model_name = "qwen/qwen-2.5-72b-instruct",  
                  stream = True, max_tokens = 2000, temperature = 1, top_p = 1,
                  presence_penalty = 0, frequency_penalty = 0, response_format = { "type": "text" },
@@ -42,7 +43,7 @@ class LLModel:
         self.summarizer = summarizer
         self.conversation_buffer = []
         self.keep_k = config.conversation_buffer_keep_k
-        self.max_round_dialog = config.max_round_dialog
+        self.max_round_dialog = max_round_dialog
         self.dialog_summary = dialog_summary
 
         self.client = OpenAI(

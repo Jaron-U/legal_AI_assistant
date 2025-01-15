@@ -24,4 +24,3 @@ class Config:
     web_ranked_k = 3
 
     conversation_buffer_keep_k = 3
-    max_round_dialog = 8

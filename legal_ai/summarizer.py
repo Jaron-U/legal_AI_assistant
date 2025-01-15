@@ -1,5 +1,5 @@
-from config import Config
-from utils import get_sys_prompt
+from .config import Config
+from .utils import get_sys_prompt
 from openai import OpenAI
 from typing import List, Dict
 
@@ -31,7 +31,7 @@ class Summarizer:
         )
 
     def get_summary(self, conversation_buffer: List[Dict[str, str]] = None, query: List[str] = None):
-        print("Summarizing content...")
+        # print("Summarizing content...")
         if conversation_buffer:
             message = self.system_prompt.format(
                 conversation_history=conversation_buffer,
