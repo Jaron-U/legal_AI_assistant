@@ -71,10 +71,7 @@ def get_context(models: dict, rewritten_query:str, keywords: list[str], config: 
     context_hits = _get_context_from_db(keywords_vectors, config.db_k, config.db_url)
     reranked_context = rerank_documents(rewritten_query, context_hits, config.ranked_k, reranker)
 
-    # combine the ranked context into one string
-    context = "\n\n".join(reranked_context)
-
-    return context
+    return reranked_context
 
 if __name__ == "__main__":
     def embedding_models_init(config: Config):

@@ -8,10 +8,19 @@ import transformers
 transformers.logging.set_verbosity_error()
 from main import *
 from tqdm import tqdm
+from ragas.llms import LangchainLLMWrapper
 
 from rouge_chinese import Rouge
 import jieba
-from openai import OpenAI
+from langchain_openai import ChatOpenAI
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,
+    answer_relevancy,
+    context_recall,
+    context_precision,
+)
 
 def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_models: dict):
     with open('evaluate/flzx.json', 'r', encoding='utf-8') as file:
@@ -22,7 +31,7 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
     for i, item in enumerate(tqdm(test_data)):
         query = item['question']
 
-        response = only_response(query, config, models, embedding_models)
+        response, contexts = only_response(query, config, models, embedding_models)
         print("query:", query)
         print("response:", response)
         answer = item['answer']
@@ -31,6 +40,7 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
             str(i): {
                 "origin_prompt": query,
                 "prediction": response,
+                "contexts": contexts,
                 "refr": answer
             }
         }
@@ -64,18 +74,72 @@ def compute_flzx(data_dict):
     average_rouge_l = sum(rouge_ls) / len(rouge_ls)
     return {"score": average_rouge_l}
 
-if __name__ == "__main__":
+def law_bench(config, models, embedding_models):
     # {'score': 0.17831063105163042}
-    config = init()
-    models = llmodels_init(config)
-    embedding_models = embedding_models_init(config)
+    # qwen2-7b 0.159
     generate_prediction(config, models, embedding_models)
 
-    # qwen2-7b 0.159
-
     # evaluate the predictions
-    # {'score': 0.15610118712931575}
+    # {'score': 0.15733119902600465}
     with open('predictions.json', 'r', encoding='utf-8') as file:
         data_dict = json.load(file)
     print("start to calculate the score...")
     print(compute_flzx(data_dict))
+
+def ragas_evaluate(config):
+    evaluate_model = evaluate_model_init(config)
+
+    with open('predictions.json', 'r', encoding='utf-8') as file:
+        predictions = json.load(file)
+    
+    results = {
+        'origin_prompt': [],
+        'prediction': [],
+        'contexts': [],
+        'refr': []
+    }
+    for item in predictions.values():
+        results['origin_prompt'].append(item['origin_prompt'])
+        results['prediction'].append(item['prediction'])
+        results['contexts'].append(item['contexts'])
+        results['refr'].append(item['refr'])
+    
+    data = {
+        "user_input": results['origin_prompt'],
+        "response": results['prediction'],
+        "retrieved_contexts": results['contexts'],
+        "reference": results['refr']
+    }
+
+    dataset = Dataset.from_dict(data)
+    results = evaluate(
+        dataset=dataset,
+        metrics=[
+            context_precision,
+            context_recall,
+            faithfulness,
+            answer_relevancy,
+        ],
+        llm=evaluate_model,
+    )
+
+    df = results.to_pandas()
+    averages = df[['context_precision', 'context_recall', 'faithfulness', 'answer_relevancy']].mean()
+    averages.to_csv('averages.csv', header=["average_value"])
+    df.to_csv('ragas_evaluate.csv')
+
+def evaluate_model_init(config: Config):
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        api_key=config.llm_api_key_evaluate,
+    )
+    return llm
+
+if __name__ == "__main__":
+    config = init()
+    models = llmodels_init(config)
+    # embedding_models = embedding_models_init(config)
+    # law_bench(config, models, embedding_models)
+
+    ragas_evaluate(config)
+    

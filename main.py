@@ -79,7 +79,10 @@ def embedding_models_init(config: Config):
 def retrieve_db(models: dict, rewritten_query: str, keywords: list[str], config: Config):
     # print("Retrieving from database...")
     retrieved_content = get_context(models, rewritten_query, keywords, config)
-    return retrieved_content
+
+    # combine the ranked context into one string
+    context = "\n\n".join(retrieved_content)
+    return context
 
 def retrieve_web(models: dict, embedding_models: dict, rewritten_query: str, 
                  db_content: str, keywords: list[str], config: Config):
@@ -162,42 +165,54 @@ def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict)
             _ = generate(legal_assistant_model, user_input, retrieved_context)
         else:
             print(f"\nAssistant: {intent_res}")
+
+
+
+
+def retrieve_db_list(models: dict, rewritten_query: str, keywords: list[str], config: Config) -> List[str]:
+    # print("Retrieving from database...")
+    retrieved_content = get_context(models, rewritten_query, keywords, config)
+    return retrieved_content
     
 def only_response(user_input: str, config: Config, models: Dict[str, LLModel], embedding_models: dict):
     legal_assistant_model = models["legal_assistant_model"]
     intent_recog_model = models["intent_recog_model"]
     query_rewrite_model = models["query_rewrite_model"]
+
+    retrieved_context = []
     
     # get the intent of the user's input
     intent_res = generate_response(user_input, intent_recog_model, print_response = False)
+    print("intent_res: ", intent_res)
     if "no" in intent_res.lower():
         # if user asks a question that is not related to law, remove the last user's message
-        return ("对不起，无法解答与法律无关的问题。")
+        return ("对不起，无法解答与法律无关的问题。"), retrieved_context
     elif "yes" in intent_res.lower():
         # if user asks a question that is related to law, then rewrite the question
         rewritten_query = generate_response(user_input, query_rewrite_model, print_response = False)
+        print(rewritten_query)
         try:
             rewritten_query_json = json.loads(rewritten_query)
         except json.JSONDecodeError:
-            return ("对不起，无法解答这个问题。")
+            return ("对不起，无法解答这个问题。"), retrieved_context
         rewritten_query = rewritten_query_json["rewritten"]
         keywords = rewritten_query_json["keywords"]
 
         # get the context from the database
-        retrieved_context = retrieve_db(embedding_models, rewritten_query, keywords, config)
+        retrieved_context = retrieve_db_list(embedding_models, rewritten_query, keywords, config)
 
         # check the content from the database
         web_content = retrieve_web(models, embedding_models, rewritten_query, 
                                     retrieved_context, keywords, config)
         # print("web_content: ", web_content)
         if web_content:
-            retrieved_context += "\n\n" + web_content
+            retrieved_context.append(web_content)
 
         # generate the response
         response = generate(legal_assistant_model, user_input, retrieved_context, print_response=False)
-        return response
+        return response, retrieved_context
     else:
-        return (f"Assistant: {intent_res}")
+        return (f"Assistant: {intent_res}"), retrieved_context
 
 def main():
     config = init()

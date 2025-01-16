@@ -3,7 +3,9 @@ class Config:
     # for llm
     llm_api_url = "https://api.novita.ai/v3/openai"
     # llm_api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    llm_api_key = os.getenv("OPENAI_API_KEY")
+    llm_api_key = os.getenv("OPENAI_API_KEY_C")
+
+    llm_api_key_evaluate = os.getenv("OPENAI_API_KEY")
 
     # for FlagModel
     flag_model_name = 'BAAI/bge-large-zh-v1.5'
