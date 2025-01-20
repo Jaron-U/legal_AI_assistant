@@ -144,7 +144,10 @@ def bash_run(config: Config, models: Dict[str, LLModel], embedding_models: dict)
             rewritten_query = generate_response(user_input, query_rewrite_model, print_response = False)
             print(rewritten_query)
             try:
-                rewritten_query_json = json.loads(rewritten_query)
+                start_idx = rewritten_query.find('{')
+                end_idx = rewritten_query.rfind('}') + 1
+                json_str = rewritten_query[start_idx:end_idx]
+                rewritten_query_json = json.loads(json_str)
             except json.JSONDecodeError:
                 print("\nAssistant: 对不起，无法解答这个问题。")
                 continue
@@ -192,7 +195,10 @@ def only_response(user_input: str, config: Config, models: Dict[str, LLModel], e
         rewritten_query = generate_response(user_input, query_rewrite_model, print_response = False)
         print(rewritten_query)
         try:
-            rewritten_query_json = json.loads(rewritten_query)
+            start_idx = rewritten_query.find('{')
+            end_idx = rewritten_query.rfind('}') + 1
+            json_str = rewritten_query[start_idx:end_idx]
+            rewritten_query_json = json.loads(json_str)
         except json.JSONDecodeError:
             return ("对不起，无法解答这个问题。"), retrieved_context
         rewritten_query = rewritten_query_json["rewritten"]

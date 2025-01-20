@@ -14,6 +14,8 @@ cd legal_AI_assistant
 ```bash
 # recommend to use virtualenv
 pip install -r requirements.txt
+
+pip install -e .
 ```
 
 ## Build the database
@@ -77,5 +79,13 @@ python legal/main.py
 
 ## Evaluate the model
 [Law Bench](https://github.com/open-compass/LawBench/tree/main)  
-I am not testing yet ... 
+[rags](https://github.com/explodinggradients/ragas)
+
+### Result
+- Recursive segmentation, hit rate 78%
+- Intent recognition: accuracy 95%
+-  Added query rewriting, 85%;
+#### RAG accuracy 
+- before fine-tuning: 82%;
+- after fine-tuning: 88%;
 

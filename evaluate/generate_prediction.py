@@ -6,9 +6,8 @@ from legal_ai.llmodel import LLModel
 from typing import List, Dict
 import transformers
 transformers.logging.set_verbosity_error()
-from main import *
+from legal_ai.main import *
 from tqdm import tqdm
-from ragas.llms import LangchainLLMWrapper
 
 from rouge_chinese import Rouge
 import jieba
@@ -141,5 +140,4 @@ if __name__ == "__main__":
     # embedding_models = embedding_models_init(config)
     # law_bench(config, models, embedding_models)
 
-    ragas_evaluate(config)
-    
+    # ragas_evaluate(config)
