@@ -74,7 +74,7 @@ Also your can modify your own LLM API url in the legal_ai/config.py. The large m
 
 ### 2. Start the project
 ```bash
-python legal/main.py
+python legal_ai/main.py
 ```
 
 ## Evaluate the model
