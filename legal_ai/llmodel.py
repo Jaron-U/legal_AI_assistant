@@ -6,13 +6,14 @@ from .summarizer import Summarizer
 
 class LLModel:
     def __init__(self, config: Config, summarizer: Summarizer,
+                 llm_api_url: str, llm_api_key: str,
                  conversation_embedding_prompt: bool = True,
                  dialog_summary: bool = False,
                  max_round_dialog: int = 8,
                  model_name = "qwen/qwen-2.5-72b-instruct",  
                  stream = True, max_tokens = 2000, temperature = 1, top_p = 1,
-                 presence_penalty = 0, frequency_penalty = 0, response_format = { "type": "text" },
-                 top_k = 50, repetition_penalty = 1, min_p = 0, system_prompt_name = "legal_assistant"):
+                 system_prompt_name = "legal_assistant",
+                 ):
         '''
         Args:
             config: Config object
@@ -26,13 +27,6 @@ class LLModel:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.response_format = response_format
-        self.top_k = top_k
-        self.repetition_penalty = repetition_penalty
-        self.min_p = min_p
-        self.repetition_penalty = repetition_penalty
 
         self.system_prompt_name = system_prompt_name
         self.system_prompt = get_sys_prompt(system_prompt_name)
@@ -47,8 +41,8 @@ class LLModel:
         self.dialog_summary = dialog_summary
 
         self.client = OpenAI(
-            base_url=config.llm_api_url,
-            api_key=config.llm_api_key,
+            base_url=llm_api_url,
+            api_key=llm_api_key,
         )
 
         self.response = None
@@ -121,15 +115,7 @@ class LLModel:
             stream=self.stream,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            top_p=self.top_p,
-            presence_penalty=self.presence_penalty,
-            frequency_penalty=self.frequency_penalty,
-            response_format=self.response_format,
-            extra_body={
-                "top_k": self.top_k,
-                "repetition_penalty": self.repetition_penalty,
-                "min_p": self.min_p,
-            }
+            top_p=self.top_p
         )
         
         self.response = response

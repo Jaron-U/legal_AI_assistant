@@ -27,7 +27,7 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
     
     predications = {}
     
-    for i, item in enumerate(tqdm(test_data)):
+    for i, item in enumerate(tqdm(test_data[:5])):
         query = item['question']
 
         response, contexts = only_response(query, config, models, embedding_models)
@@ -137,7 +137,7 @@ def evaluate_model_init(config: Config):
 if __name__ == "__main__":
     config = init()
     models = llmodels_init(config)
-    # embedding_models = embedding_models_init(config)
-    # law_bench(config, models, embedding_models)
+    embedding_models = embedding_models_init(config)
+    law_bench(config, models, embedding_models)
 
     # ragas_evaluate(config)

@@ -26,13 +26,17 @@ def llmodels_init(config: Config):
 
     # for main model
     legal_assistant_model = LLModel(config, summarizer=summarizer, stream=True,
+                                    llm_api_url=config.local_api_url,
+                                    llm_api_key=config.local_api_key,
                                     conversation_embedding_prompt=True,
                                     dialog_summary=False,
                                     max_round_dialog=1,
-                                    model_name="qwen/qwen-2-7b-instruct",
+                                    model_name="test",
                                     system_prompt_name="legal_assistant")
     # for intent recognition
     intent_recog_model = LLModel(config, summarizer=summarizer, stream=True,
+                                llm_api_url=config.llm_api_url,
+                                llm_api_key=config.llm_api_key,
                                 conversation_embedding_prompt=True,
                                 dialog_summary=False,
                                 max_round_dialog=1,
@@ -40,6 +44,8 @@ def llmodels_init(config: Config):
                                 system_prompt_name="intent_recognition")
     
     query_rewrite_model = LLModel(config, summarizer=summarizer, stream=False,
+                                llm_api_url=config.llm_api_url,
+                                llm_api_key=config.llm_api_key,
                     conversation_embedding_prompt=True,
                     dialog_summary=False,
                     max_round_dialog=1,
@@ -47,6 +53,8 @@ def llmodels_init(config: Config):
                     system_prompt_name="query_rewrite")
 
     db_content_check_model = LLModel(config, summarizer=summarizer, stream=True,
+                                llm_api_url=config.llm_api_url,
+                                llm_api_key=config.llm_api_key,
                                 conversation_embedding_prompt=True,
                                 dialog_summary=False,
                                 model_name="qwen/qwen-2-7b-instruct", 

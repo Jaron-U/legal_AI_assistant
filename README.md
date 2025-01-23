@@ -89,3 +89,8 @@ python legal_ai/main.py
 - before fine-tuning: 82%;
 - after fine-tuning: 88%;
 
+## Fine-tuning
+### SFT
+dataset: [5k_qa_data](https://github.com/liuhuanyong/CrimeKgAssitant/tree/master/data)
+Using LLaMA Factory to fine-tune the model
+

@@ -5,6 +5,9 @@ class Config:
     # llm_api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     llm_api_key = os.getenv("OPENAI_API_KEY_C")
 
+    local_api_url = "https://localhost:8000/v1"
+    local_api_key = "none"
+
     llm_api_key_evaluate = os.getenv("OPENAI_API_KEY")
 
     # for FlagModel
