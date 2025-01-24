@@ -112,10 +112,10 @@ def bash_run(llms: Dict, embeding_models: Dict, config: Config):
             # check if the query can be answered from the context
             db_content_check_res = db_content_check(db_content_checker, context_docs)
             # print(f"\ncontent check: {db_content_check_res}")
-            web_context_summary = retrieve_from_web(db_content_check_res, web_content_summarizer, 
-                                                    rewritten_query_dict, embeding_models['rerank_model'], 
-                                                    config)
-            if web_context_summary is not None:
+            if "no" in db_content_check_res.lower():
+                print("\nRetrieving from web...")
+                web_context_summary = retrieve_from_web(web_content_summarizer, rewritten_query_dict, 
+                                                        embeding_models['rerank_model'], config)
                 context_docs.append(web_context_summary)
 
             response = get_final_response(legal_assistant, user_input, context_docs)
@@ -155,11 +155,11 @@ def for_evalute(user_input: str, llms: Dict, embeding_models: Dict, config: Conf
         db_content_check_res = db_content_check(db_content_checker, context_docs)
         result["db_content_check"] = db_content_check_res
         # print(f"\ncontent check: {db_content_check_res}")
-        web_context_summary = retrieve_from_web(db_content_check_res, web_content_summarizer, 
-                                                rewritten_query_dict, embeding_models['rerank_model'], 
-                                                config)
-        if web_context_summary is not None:
+        if "no" in db_content_check_res.lower():
+            web_context_summary = retrieve_from_web(web_content_summarizer, rewritten_query_dict, 
+                                                    embeding_models['rerank_model'], config)
             context_docs.append(web_context_summary)
+
         result["contexts"] = context_docs
         response = get_final_response(legal_assistant, user_input, context_docs, print_response=False)
         result["response"] = response
