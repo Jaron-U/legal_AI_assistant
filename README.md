@@ -12,7 +12,7 @@ cd legal_AI_assistant
 ```
 ### 2. Install the dependencies
 ```bash
-# recommend to use virtualenv
+# recommend to use virtual environment
 pip install -r requirements.txt
 
 pip install -e .
@@ -32,7 +32,7 @@ python save_json.py # need to modeify the path in the script
 
 ### 3. Create the database in Docker
 ```bash
-# download the docker if you don't have
+# download the docker if you don't have one
 
 # step1
 docker network create es-net
@@ -70,11 +70,11 @@ mkdir .env
 ```
 add "OPENAI_API_KEY=your_api_key" to the .env file
 
-Also your can modify your own LLM API url in the legal_ai/config.py. The large model API you use needs to be compatible with the OpenAI interface
+Also your can modify your own LLM API url in the src/config.py. The large model API you use needs to be compatible with the OpenAI interface
 
 ### 2. Start the project
 ```bash
-python legal_ai/main.py
+python src/main.py
 ```
 
 ## Evaluate the model
@@ -82,9 +82,9 @@ python legal_ai/main.py
 [rags](https://github.com/explodinggradients/ragas)
 
 ### Result
-- Recursive segmentation, hit rate 78%
-- Intent recognition: accuracy 95%
--  Added query rewriting, 85%;
+- Recursive segmentation, hit rate 88%
+- Intent recognition: accuracy 99%
+- Query rewriting 98%;
 #### RAG accuracy 
 - before fine-tuning: 82%;
 - after fine-tuning: 88%;

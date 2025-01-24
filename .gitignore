@@ -7,3 +7,4 @@ for_test/
 *.egg-info/
 *.json
 *.csv
+/evaluate_outputs/

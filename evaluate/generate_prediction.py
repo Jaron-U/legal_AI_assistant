@@ -1,12 +1,7 @@
-import os, json
-from legal_ai.retrieve import *
-from legal_ai.utils import *
-from legal_ai.config import Config
-from legal_ai.llmodel import LLModel
+import json
 from typing import List, Dict
 import transformers
 transformers.logging.set_verbosity_error()
-from legal_ai.main import *
 from tqdm import tqdm
 
 from rouge_chinese import Rouge
@@ -21,25 +16,31 @@ from ragas.metrics import (
     context_precision,
 )
 
+from src.db_retrieve import *
+from src.utils import *
+from src.config import Config
+from src.llmodel import LLModel
+from src.main import *
+
 def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_models: dict):
     with open('evaluate/flzx.json', 'r', encoding='utf-8') as file:
         test_data = json.load(file)
     
     predications = {}
     
-    for i, item in enumerate(tqdm(test_data[:5])):
+    for i, item in enumerate(tqdm(test_data)):
         query = item['question']
 
-        response, contexts = only_response(query, config, models, embedding_models)
-        print("query:", query)
-        print("response:", response)
+        result_dict = for_evalute(query, models, embedding_models, config)
         answer = item['answer']
 
         curr = {
             str(i): {
                 "origin_prompt": query,
-                "prediction": response,
-                "contexts": contexts,
+                "query_rewriter": result_dict['rewritten_query'],
+                "db_content_check": result_dict['db_content_check'],
+                "contexts": result_dict['contexts'],
+                "prediction": result_dict['response'],
                 "refr": answer
             }
         }
@@ -47,7 +48,7 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
         predications.update(curr)
 
     with open('predictions.json', 'w', encoding='utf-8') as file:
-        json.dump(predications, file, ensure_ascii=False, indent=4)
+        json.dump(predications, file, ensure_ascii=False, indent=2)
 
 # from https://github.com/open-compass/LawBench/blob/main/evaluation/utils/function_utils.py#L32
 def compute_rouge(hyps, refs):
@@ -135,9 +136,9 @@ def evaluate_model_init(config: Config):
     return llm
 
 if __name__ == "__main__":
-    config = init()
-    models = llmodels_init(config)
+    config = Config()
+    llms = llmodels_init(config)
     embedding_models = embedding_models_init(config)
-    law_bench(config, models, embedding_models)
+    law_bench(config, llms, embedding_models)
 
     # ragas_evaluate(config)
