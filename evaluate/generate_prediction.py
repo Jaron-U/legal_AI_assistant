@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from rouge_chinese import Rouge
 import jieba
-from langchain_openai import ChatOpenAI
+from langchain_openai.chat_models.base import BaseChatOpenAI
 from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics import (
@@ -47,7 +47,7 @@ def generate_prediction(config: Config, models: Dict[str, LLModel], embedding_mo
 
         predications.update(curr)
 
-    with open('predictions.json', 'w', encoding='utf-8') as file:
+    with open('evaluate_outputs/predictions_sft.json', 'w', encoding='utf-8') as file:
         json.dump(predications, file, ensure_ascii=False, indent=2)
 
 # from https://github.com/open-compass/LawBench/blob/main/evaluation/utils/function_utils.py#L32
@@ -77,11 +77,12 @@ def compute_flzx(data_dict):
 def law_bench(config, models, embedding_models):
     # {'score': 0.17831063105163042}
     # qwen2-7b 0.159
+    # sft: {'score': 0.1621620845886012}
     generate_prediction(config, models, embedding_models)
 
     # evaluate the predictions
     # {'score': 0.15733119902600465}
-    with open('predictions.json', 'r', encoding='utf-8') as file:
+    with open('evaluate_outputs/predictions_sft.json', 'r', encoding='utf-8') as file:
         data_dict = json.load(file)
     print("start to calculate the score...")
     print(compute_flzx(data_dict))
@@ -89,7 +90,7 @@ def law_bench(config, models, embedding_models):
 def ragas_evaluate(config):
     evaluate_model = evaluate_model_init(config)
 
-    with open('predictions.json', 'r', encoding='utf-8') as file:
+    with open('evaluate_outputs/predictions_sft.json', 'r', encoding='utf-8') as file:
         predictions = json.load(file)
     
     results = {
@@ -125,20 +126,27 @@ def ragas_evaluate(config):
 
     df = results.to_pandas()
     averages = df[['context_precision', 'context_recall', 'faithfulness', 'answer_relevancy']].mean()
-    averages.to_csv('averages.csv', header=["average_value"])
-    df.to_csv('ragas_evaluate.csv')
+    averages.to_csv('averages_sft.csv', header=["average_value"])
+    df.to_csv('ragas_evaluate_sft.csv')
 
 def evaluate_model_init(config: Config):
-    llm = ChatOpenAI(
-        model="gpt-4o",
-        api_key=config.llm_api_key_evaluate,
+    # llm = ChatOpenAI(
+    #     model="gpt-4o",
+    #     api_key=config.llm_api_key_evaluate,
+    # )
+    # return llm
+    llm = BaseChatOpenAI(
+        model=config.qwen7b, 
+        openai_api_key=config.api_key, 
+        openai_api_base=config.base_url,
+        max_tokens=1024
     )
-    return llm
+    # return llm
 
 if __name__ == "__main__":
     config = Config()
     llms = llmodels_init(config)
     embedding_models = embedding_models_init(config)
-    law_bench(config, llms, embedding_models)
+    # law_bench(config, llms, embedding_models)
 
-    # ragas_evaluate(config)
+    ragas_evaluate(config)

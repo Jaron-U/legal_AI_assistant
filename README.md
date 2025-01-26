@@ -82,15 +82,15 @@ python src/main.py
 [rags](https://github.com/explodinggradients/ragas)
 
 ### Result
-- Recursive segmentation, hit rate 88%
-- Intent recognition: accuracy 99%
-- Query rewriting 98%;
-#### RAG accuracy 
-- before fine-tuning: 82%;
-- after fine-tuning: 88%;
+- Recursive segmentation and markdown segmentation, hit rate: 88%
+- Intent recognition accuracy: 99%
+- Query rewriting hit rate: 98%;
+- Answer accuracy: 83%;
 
 ## Fine-tuning
 ### SFT
 dataset: [5k_qa_data](https://github.com/liuhuanyong/CrimeKgAssitant/tree/master/data)
 Using LLaMA Factory to fine-tune the model
+
+After fine-tuning, the accuracy of the answer is improved to 88%
 

@@ -50,13 +50,21 @@ def llmodels_init(config: Config):
     )
 
     legal_assistant = LLModel(
-        config.base_url, config.api_key,
-        model_name=config.qwen7b, 
+        config.local_base_url, config.local_api_key,
+        model_name=config.local_qwen7b, 
         # sys_prompt_func=legal_assistant_pt,
         dialog_summary=False, summarizer=summarizer, 
-        max_round_dialog=3, obj_name="legal_assistant",
+        max_round_dialog=0, obj_name="legal_assistant",
         min_round_dialog=1, stream = True, max_tokens = 512
     )
+    # legal_assistant = LLModel(
+    #     config.base_url, config.api_key,
+    #     model_name=config.qwen7b, 
+    #     # sys_prompt_func=legal_assistant_pt,
+    #     dialog_summary=False, summarizer=summarizer, 
+    #     max_round_dialog=0, obj_name="legal_assistant",
+    #     min_round_dialog=1, stream = True, max_tokens = 512
+    # )
 
     return {
         "intent_recognizer": intent_recognizer,
